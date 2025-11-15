@@ -1,0 +1,172 @@
+Data-Driven Forecasting: Car MSRP
+
+1.	Introduction
+Accurate car price prediction is a key problem in automotive analytics, as pricing directly reflects both product value and market positioning. Traditional valuation often relies on expert judgment, which can be subjective and inconsistent. With the growth of data availability, data-driven analysis provides an objective way to understand how technical and market features—such as engine capacity, horsepower, fuel type, mileage, and brand origin—affect vehicle prices. Using structured data and SQL-based exploration, patterns and correlations among these attributes can be revealed before developing predictive models.
+
+This project focuses on building a regression-based car price prediction model to quantify how each feature contributes to price variation. Exploratory data analysis identifies the most relevant attributes, and a multiple linear regression model is implemented to predict prices with interpretability and statistical rigor. The results provide insights into which variables most strongly influence car pricing and demonstrate how analytical modeling can support decision-making in the automotive market.
+
+2.	Data
+The dataset used for this study was obtained from Kaggle’s Car Price Prediction Challenge. It contains detailed records of car specifications and prices, representing a diverse range of manufacturers, models, and production years. Each record corresponds to one car instance with both numerical and categorical attributes.
+a.	Data Description
+i.	Source of data
+The data was collected from the publicly available Kaggle dataset “Car Price Prediction Challenge”
+(https://www.kaggle.com/datasets/deepcontractor/car-price-prediction-challenge ).
+The dataset aggregates vehicle information from multiple manufacturers and markets, making it suitable for regression-based price modeling and comparative analysis.
+ii.	Number of rows (tuples), and number of features (attributes)
+The dataset includes 19,237 rows and 18 attributes, with each row representing an individual car.
+iii.	training vs. testing split 
+To evaluate the generalization performance of the predictive model, the dataset was randomly divided into 70% (13,466 rows) for training and 30% (5,771 rows) for testing. The split ensured that samples were proportionally distributed across major features such as fuel type, brand, and body category. The training data was used to build and tune the model, while the testing set was reserved for performance validation.
+iv.	Target Response variable
+The target response variable is Price, representing the car’s market value in USD.
+v.	Feature variables:
+1.	Numerical variables
+Price, Levy, Engine volume, Mileage, Cylinders, and Airbags.
+2.	Categorical variables
+Manufacturer, Model, Prod year, Category, Leather interior, Fuel type, Gear box type, Drive wheels, Doors, Wheel, and Color.
+b.	Data cleaning and preprocessing:
+i.	Feature tuples syntax errors (Model, Manufacturer)  
+During data inspection, it was found that the Model and Manufacturer attributes contained several corrupted or invalid entries caused by inconsistent encoding and data import errors. These issues appeared as unreadable characters or partial substitutions in brand and model names (e.g., “TO¥OTA”, “HONDΔ”, “BM∑W”), which could lead to duplicate entries and inaccurate grouping during analysis.
+To address this issue, all textual fields were converted to UTF-8 encoding to ensure proper character representation. Regular expressions were then applied to detect and remove invalid symbols, followed by a manual correction process using a lookup table to fix common corrupted entries (e.g., “TO¥OTA” → “TOYOTA”, “HYUND@I” → “HYUNDAI”). After correction, the manufacturer and model names were verified against a reference list to confirm consistency. This cleaning step ensured that brand- and model-level analyses could be performed reliably in later stages.
+
+ii.	Feature creation and transformation [Manufacturers -> BrandCountry]
+A new categorical feature, BrandCountry, was created to enrich the dataset and enable region-based analysis. The original data did not include information about the country or region of each manufacturer, which limited the ability to compare pricing patterns across different markets. To address this, a dictionary mapping was constructed to link each manufacturer to its country or regional origin. For example, Toyota, Honda, and Nissan were assigned as Asian; Ford and Chevrolet as American; and BMW, Mercedes-Benz, and Audi as European.
+
+3.	SQL
+a.	Q1: How does the gasoline percentage in the market compared to year 2000 to after year 2000? [SQL Query]
+
+Code
+SELECT
+    CASE 
+        WHEN Prod_year <= 2000 THEN 'Before 2000'
+        ELSE 'After 2000'
+    END AS Period,
+    ROUND(
+        (SUM(
+            CASE 
+                WHEN Fuel_type IN ('Petrol', 'Diesel') THEN 1 
+                ELSE 0 
+            END
+        ) * 100.0) / 
+        COUNT(*),
+        2
+    ) AS Gasoline_Percentage
+FROM Car
+GROUP BY Period;
+
+Result
+Period                gasoline
+After 2000          73.64
+Before 2000       75.18
+
+b.	Q2: Is there any difference between the average car prices across different brand countries (Asian, American, European)? [SQL Query]
+
+Code
+CREATE VIEW CarUpdate AS
+    SELECT *, 
+        CASE
+            WHEN Manufacturer = 'ACURA' THEN 'Asian'
+            WHEN Manufacturer = 'ALFA ROMEO' THEN 'European'
+            WHEN Manufacturer = 'ASTON MARTIN' THEN 'European'
+            WHEN Manufacturer = 'AUDI' THEN 'European'
+            WHEN Manufacturer = 'BENTLEY' THEN 'European'
+            WHEN Manufacturer = 'BMW' THEN 'European'
+            WHEN Manufacturer = 'BUICK' THEN 'American'
+            WHEN Manufacturer = 'CADILLAC' THEN 'American'
+            WHEN Manufacturer = 'CHEVROLET' THEN 'American'
+            WHEN Manufacturer = 'CHRYSLER' THEN 'American'
+            WHEN Manufacturer = 'CITROEN' THEN 'European'
+            WHEN Manufacturer = 'DAEWOO' THEN 'Asian'
+            WHEN Manufacturer = 'DAIHATSU' THEN 'Asian'
+            WHEN Manufacturer = 'DODGE' THEN 'American'
+            WHEN Manufacturer = 'FERRARI' THEN 'European'
+            WHEN Manufacturer = 'FIAT' THEN 'European'
+            WHEN Manufacturer = 'FORD' THEN 'American'
+            WHEN Manufacturer = 'GAZ' THEN 'European'
+            WHEN Manufacturer = 'GMC' THEN 'American'
+            WHEN Manufacturer = 'GREATWALL' THEN 'Asian'
+            WHEN Manufacturer = 'HAVAL' THEN 'Asian'
+            WHEN Manufacturer = 'HONDA' THEN 'Asian'
+            WHEN Manufacturer = 'HUMMER' THEN 'American'
+            WHEN Manufacturer = 'HYUNDAI' THEN 'Asian'
+            WHEN Manufacturer = 'INFINITI' THEN 'Asian'
+            WHEN Manufacturer = 'ISUZU' THEN 'Asian'
+            WHEN Manufacturer = 'JAGUAR' THEN 'European'
+            WHEN Manufacturer = 'JEEP' THEN 'American'
+            WHEN Manufacturer = 'KIA' THEN 'Asian'
+            WHEN Manufacturer = 'LAMBORGHINI' THEN 'European'
+            WHEN Manufacturer = 'LANCIA' THEN 'European'
+            WHEN Manufacturer = 'LAND ROVER' THEN 'European'
+            WHEN Manufacturer = 'LEXUS' THEN 'Asian'
+            WHEN Manufacturer = 'LINCOLN' THEN 'American'
+            WHEN Manufacturer = 'MASERATI' THEN 'European'
+            WHEN Manufacturer = 'MAZDA' THEN 'Asian'
+            WHEN Manufacturer = 'MERCEDES-BENZ' THEN 'European'
+            WHEN Manufacturer = 'MERCURY' THEN 'American'
+            WHEN Manufacturer = 'MINI' THEN 'European'
+            WHEN Manufacturer = 'MITSUBISHI' THEN 'Asian'
+            WHEN Manufacturer = 'MOSKVICH' THEN 'European'
+            WHEN Manufacturer = 'NISSAN' THEN 'Asian'
+            WHEN Manufacturer = 'OPEL' THEN 'European'
+            WHEN Manufacturer = 'PEUGEOT' THEN 'European'
+            WHEN Manufacturer = 'PONTIAC' THEN 'American'
+            WHEN Manufacturer = 'PORSCHE' THEN 'European'
+            WHEN Manufacturer = 'RENAULT' THEN 'European'
+            WHEN Manufacturer = 'ROLLS-ROYCE' THEN 'European'
+            WHEN Manufacturer = 'ROVER' THEN 'European'
+            WHEN Manufacturer = 'SAAB' THEN 'European'
+            WHEN Manufacturer = 'SATURN' THEN 'American'
+            WHEN Manufacturer = 'SCION' THEN 'Asian'
+            WHEN Manufacturer = 'SEAT' THEN 'European'
+            WHEN Manufacturer = 'SKODA' THEN 'European'
+            WHEN Manufacturer = 'SSANGYONG' THEN 'Asian'
+            WHEN Manufacturer = 'SUBARU' THEN 'Asian'
+            WHEN Manufacturer = 'SUZUKI' THEN 'Asian'
+            WHEN Manufacturer = 'TESLA' THEN 'American'
+            WHEN Manufacturer = 'TOYOTA' THEN 'Asian'
+            WHEN Manufacturer = 'UAZ' THEN 'European'
+            WHEN Manufacturer = 'VAZ' THEN 'European'
+            WHEN Manufacturer = 'VOLKSWAGEN' THEN 'European'
+            WHEN Manufacturer = 'VOLVO' THEN 'European'
+            WHEN Manufacturer = 'ZAZ' THEN 'European'
+        END AS Brand_Country
+        FROM Car;
+        
+-- SELECT * FROM CarUpdate;
+
+SELECT Brand_Country, AVG(Price) AS Avg_Price
+FROM CarUpdate
+GROUP BY Brand_Country
+ORDER BY Brand_Country;
+
+DROP VIEW CarUpdate;
+
+Result
+Brand_Country         Avg_Price
+American	         15442.29398
+Asian	                     17366.15844
+European	          23102.22666
+
+c.	Q3: Which car features tend to co-occur in high-priced models? [Neo4j]
+d.	
+4.	Methodology of Prediction Analysis
+a.	Model Assumptions (TBD)
+i.	Linearity 
+ii.	Independence
+iii.	Normality of residuals 
+iv.	Homoscedasticity
+v.	Multicollinearity (Assuming no muticolinearity between features existed)
+b.	Linear regression (Latex)
+i.	Prediction Model: y = w^t* x+b 
+ii.	Cost function: MSE and Gradient of MSE
+5.	Prediction Analysis
+a.	Implementation
+b.	Result 
+c.	Discussion
+d.	Conclusion
+
+
+
+
+
+Overleaf Report:
+https://www.overleaf.com/project/691130caf208ab5c916dffa3 
