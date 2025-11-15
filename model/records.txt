@@ -1,0 +1,31 @@
+(gg) :~/Downloads/project$ python model/train_model.py --model-type catboost --output-dir model/artifacts
+Baseline metrics (predict train mean): {'mse': 258353647.00099832, 'rmse': 16073.383184662722, 'mae': 11757.386925168035, 'r2': -0.0005357562147469963}
+Model training complete.
+{
+  "mse": 95373903.789201,
+  "rmse": 9765.956368385076,
+  "mae": 5380.603309214438,
+  "r2": 0.6306419434810145,
+  "cv_mse_mean": 96309376.0,
+  "cv_mse_std": 6390508.5,
+  "cv_mse_scores": [
+    105728152.0,
+    90689056.0,
+    87805128.0,
+    98163632.0,
+    99160888.0
+  ],
+  "train_size": 13245,
+  "test_size": 5677,
+  "model_type": "catboost_gpu",
+  "catboost_best_params": {
+    "learning_rate": 0.06,
+    "depth": 10,
+    "iterations": 400,
+    "l2_leaf_reg": 3.0,
+    "bagging_temperature": 1.0,
+    "border_count": 128
+  },
+  "backend": "gpu",
+  "catboost_combinations_evaluated": 16
+}

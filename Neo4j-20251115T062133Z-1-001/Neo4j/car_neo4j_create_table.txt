@@ -1,0 +1,28 @@
+LOAD CSV WITH HEADERS FROM 'file:///car_price_prediction_CLEANED.csv' AS row
+CALL {
+  WITH row
+
+  MERGE (c:Car {ID: row.ID})
+  SET  c.Price             = row.Price,
+       c.Levy              = row.Levy,
+       c.Manufacturer      = row.Manufacturer,
+       c.Model             = row.Model,
+       c.Prod_year         = row.Prod_year,
+       c.Category          = row.Category,
+       c.Leather_interior  = row.Leather_interior,
+       c.Fuel_type         = row.Fuel_type,
+       c.Engine_volume     = row.Engine_volume,
+       c.Mileage           = row.Mileage,
+       c.Cylinders         = row.Cylinders,
+       c.Gear_box_type     = row.Gear_box_type,
+       c.Drive_wheels      = row.Drive_wheels,
+       c.Doors             = row.Doors,
+       c.Wheel             = row.Wheel,
+       c.Color             = row.Color,
+       c.Airbags           = row.Airbags
+
+  MERGE (m:Manufacturer {name: row.Manufacturer})
+  MERGE (mo:Model {name: row.Model})
+  MERGE (m)-[:MAKES]->(mo)
+  MERGE (mo)-[:INSTANCES]->(c)
+} IN TRANSACTIONS OF 10000 ROWS;
