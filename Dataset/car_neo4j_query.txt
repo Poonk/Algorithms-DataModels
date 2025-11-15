@@ -1,0 +1,103 @@
+//// ---------- Create table ----------
+// Constraints
+CREATE CONSTRAINT car_id_unique IF NOT EXISTS
+FOR (c:Car) REQUIRE c.ID IS UNIQUE;
+
+CREATE CONSTRAINT manufacturer_name_unique IF NOT EXISTS
+FOR (m:Manufacturer) REQUIRE m.name IS UNIQUE;
+
+CREATE CONSTRAINT model_name_unique IF NOT EXISTS
+FOR (mo:Model) REQUIRE mo.name IS UNIQUE;
+
+// Import in batches
+LOAD CSV WITH HEADERS FROM 'file:///car_price_prediction_CLEANED.csv' AS row
+CALL {
+  WITH row
+
+  MERGE (c:Car {ID: row.ID})
+  SET  c.Price             = row.Price,
+       c.Levy              = row.Levy,
+       c.Manufacturer      = row.Manufacturer,
+       c.Model             = row.Model,
+       c.Prod_year         = row.Prod_year,
+       c.Category          = row.Category,
+       c.Leather_interior  = row.Leather_interior,
+       c.Fuel_type         = row.Fuel_type,
+       c.Engine_volume     = row.Engine_volume,
+       c.Mileage           = row.Mileage,
+       c.Cylinders         = row.Cylinders,
+       c.Gear_box_type     = row.Gear_box_type,
+       c.Drive_wheels      = row.Drive_wheels,
+       c.Doors             = row.Doors,
+       c.Wheel             = row.Wheel,
+       c.Color             = row.Color,
+       c.Airbags           = row.Airbags
+
+  MERGE (m:Manufacturer {name: row.Manufacturer})
+  MERGE (mo:Model {name: row.Model})
+  MERGE (m)-[:MAKES]->(mo)
+  MERGE (mo)-[:INSTANCES]->(c)
+} IN TRANSACTIONS OF 10000 ROWS;
+
+//// ---------- Q3 ----------
+MATCH p=(:Manufacturer {name: "MERCEDES-BENZ"})-[:MAKES]->(:Model)
+RETURN p;
+
+//// ---------- Q4 ----------
+//// 1. Make sure Price is numeric
+MATCH (c:Car)
+WHERE c.Price IS NOT NULL
+SET c.priceNum = toFloat(c.Price);
+
+// sanity-check
+MATCH (c:Car)
+RETURN c.Price, c.priceNum
+LIMIT 10;
+
+//// 2. Compute the “top 20%” price threshold, finds the price at the 80th percentile (top 20% most expensive)
+CALL {
+  MATCH (c:Car)
+  WHERE c.priceNum IS NOT NULL
+  WITH c
+  ORDER BY c.priceNum DESC
+  WITH collect(c.priceNum) AS prices
+  // 0.2 = top 20% (80th percentile index)
+  RETURN prices[toInteger(size(prices) * 0.2)] AS highPriceThreshold
+}
+RETURN highPriceThreshold;
+
+//// 3. Create CO_OCCUR_HIGHPRICE relationships (top 20% cars)
+// Clear old co-occurrence relationships (if any)
+MATCH ()-[r:CO_OCCUR_HIGHPRICE]-()
+DELETE r;
+// 1) Compute 80th percentile price as the high-price threshold
+CALL {
+  MATCH (c:Car)
+  WHERE c.priceNum IS NOT NULL
+  WITH c
+  ORDER BY c.priceNum DESC
+  WITH collect(c.priceNum) AS prices
+  RETURN prices[toInteger(size(prices) * 0.2)] AS highPriceThreshold
+}
+WITH highPriceThreshold
+
+// 2) Take only high-priced cars (>= threshold)
+MATCH (c:Car)
+WHERE c.priceNum >= highPriceThreshold
+
+// 3) Collect all feature nodes attached to each car
+MATCH (c)-[:HAS_FUEL|IN_CATEGORY|HAS_GEARBOX|HAS_DRIVE|HAS_COLOR|
+           HAS_WHEEL|MADE_IN|HAS_DOORS|HAS_CYLINDERS|ENGINE_BUCKET]->(f)
+WITH c, collect(DISTINCT f) AS feats
+
+// 4) Generate all unordered feature pairs per car
+UNWIND feats AS f1
+UNWIND feats AS f2
+WITH c, f1, f2
+WHERE id(f1) < id(f2)
+
+// 5) Count how many high-priced cars share each pair
+WITH f1, f2, count(DISTINCT c) AS coCount
+MERGE (f1)-[r:CO_OCCUR_HIGHPRICE]->(f2)
+SET  r.count = coCount;
+
