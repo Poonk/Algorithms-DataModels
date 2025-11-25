@@ -5,6 +5,7 @@ SELECT * FROM Car;
 -- SELECT DISTINCT Model FROM Car ORDER BY Model;
 
 -- Q1: How does the Gas vehicle percentage in the market compared to year 2000 to after year 2000?
+-- 2000
 SELECT
     CASE 
         WHEN Prod_year <= 2000 THEN 'Before 2000'
@@ -21,7 +22,64 @@ SELECT
         2
     ) AS Gasoline_Percentage
 FROM Car
-GROUP BY Period;
+GROUP BY Period
+ORDER BY Period DESC;
+
+-- 2010
+SELECT
+    CASE 
+        WHEN Prod_year <= 2010 THEN 'Before 2010'
+        ELSE 'After 2010'
+    END AS Period,
+    ROUND(
+        (SUM(
+            CASE 
+                WHEN Fuel_type IN ('Petrol', 'Diesel') THEN 1 
+                ELSE 0 
+            END
+        ) * 100.0) / 
+        COUNT(*),
+        2
+    ) AS Gasoline_Percentage
+FROM Car
+GROUP BY Period
+ORDER BY Period DESC;
+
+-- 2015
+SELECT
+    CASE 
+        WHEN Prod_year <= 2015 THEN 'Before 2015'
+        ELSE 'After 2015'
+    END AS Period,
+    ROUND(
+        (SUM(
+            CASE 
+                WHEN Fuel_type IN ('Petrol', 'Diesel') THEN 1 
+                ELSE 0 
+            END
+        ) * 100.0) / 
+        COUNT(*),
+        2
+    ) AS Gasoline_Percentage
+FROM Car
+GROUP BY Period
+ORDER BY Period DESC;
+
+SELECT
+    Prod_year,
+    ROUND(
+        SUM(CASE 
+                WHEN Fuel_type IN ('Petrol', 'Diesel') THEN 1 
+                ELSE 0 
+            END) * 100.0
+        / COUNT(*),
+        2
+    ) AS Gasoline_Percentage
+FROM car
+WHERE Prod_year >= 1990
+GROUP BY Prod_year
+ORDER BY Prod_year;
+
 
 -- Q2: Is there any difference between the average car prices across different brand countries (Japanese, American, European)?
 
@@ -101,5 +159,13 @@ SELECT Brand_Country, AVG(Price) AS Avg_Price
 FROM CarUpdate
 GROUP BY Brand_Country
 ORDER BY Brand_Country;
+
+SELECT 
+    Manufacturer,
+    Brand_Country,
+    ROUND(AVG(Price), 2) AS Avg_Price
+FROM CarUpdate
+GROUP BY Manufacturer, Brand_Country
+ORDER BY Avg_Price DESC;
 
 DROP VIEW CarUpdate;
